@@ -3,6 +3,24 @@
 # Static service name
 SERVICE_NAME="sashimono-agent.service"
 NOTIFICATION_FILE="/opt/ripplered/notification_url.txt"
+LOG_FILE="/opt/ripplered/evernodewatcher.log"
+LOGROTATE_CONFIG="/etc/logrotate.d/evernodewatcher"
+
+# Function to create logrotate configuration file
+create_logrotate_config() {
+    if [ ! -f "$LOGROTATE_CONFIG" ]; then
+        sudo tee "$LOGROTATE_CONFIG" > /dev/null << EOF
+$LOG_FILE {
+    size 5k
+    rotate 1
+    delaycompress
+    missingok
+    notifempty
+    create 644 root root
+}
+EOF
+    fi
+}
 
 # Function to read notification URL from file
 read_notification_url() {
@@ -18,24 +36,28 @@ save_notification_url() {
     echo "$1" > "$NOTIFICATION_FILE"
 }
 
-# Check if notification URL is provided
+# Prompt the user for the notification URL if not provided as an argument
 if [ "$#" -lt 1 ]; then
-    read_notification_url
-    if [ -z "$NOTIFICATION_URL" ]; then
-        echo "Error: You must provide UpTime Kuma PUSH URL."
+    read -p "Enter the notification URL (current URL: $(<"$NOTIFICATION_FILE")): " NEW_NOTIFICATION_URL
+    if [ -z "$NEW_NOTIFICATION_URL" ]; then
+        echo "Error: You must provide a notification URL."
         exit 1
     fi
 else
-    # Save the new notification URL
-    NOTIFICATION_URL="$1"
-    save_notification_url "$NOTIFICATION_URL"
+    NEW_NOTIFICATION_URL="$1"
 fi
+
+# Save the new notification URL
+save_notification_url "$NEW_NOTIFICATION_URL"
 
 # Check the service status and notify.
 if systemctl is-active --quiet "$SERVICE_NAME"; then
     # If service is running, call the notification URL
-    curl -s "$NOTIFICATION_URL" >/dev/null
+    curl -s "$NEW_NOTIFICATION_URL" >/dev/null
 fi
+
+# Create logrotate configuration
+create_logrotate_config
 
 # Make the script executable
 chmod +x "$0"
