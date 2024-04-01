@@ -46,8 +46,11 @@ if ! curl -s "$NOTIFICATION_URL" >/dev/null; then
     exit 1
 fi
 
+# Make the script executable
+chmod +x "$INSTALL_DIR/evernodewatcher.sh"
+
 # Set up cron job
-CRON_JOB="* * * * * $INSTALL_DIR/push_url.sh >> $LOG_FILE 2>&1"
+CRON_JOB="* * * * * $INSTALL_DIR/evernodewatcher.sh >> $LOG_FILE 2>&1"
 (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
 
 echo "Setup completed successfully."
