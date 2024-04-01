@@ -52,5 +52,3 @@ chmod +x "$INSTALL_DIR/evernodewatcher.sh"
 # Set up cron job
 CRON_JOB="* * * * * $INSTALL_DIR/evernodewatcher.sh >> $LOG_FILE 2>&1"
 (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
-
-echo "Setup completed successfully."
