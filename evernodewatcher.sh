@@ -1,66 +1,48 @@
 #!/bin/bash
 
-# Static service name
-SERVICE_NAME="sashimono-agent.service"
-NOTIFICATION_FILE="/opt/ripplered/notification_url.txt"
+# Set up log file
 LOG_FILE="/opt/ripplered/evernodewatcher.log"
-LOGROTATE_CONFIG="/etc/logrotate.d/evernodewatcher"
+touch "$LOG_FILE"
+chmod 644 "$LOG_FILE"
 
-# Function to create logrotate configuration file
-create_logrotate_config() {
-    if [ ! -f "$LOGROTATE_CONFIG" ]; then
-        sudo tee "$LOGROTATE_CONFIG" > /dev/null << EOF
+# Set up log rotation
+LOGROTATE_CONFIG="/etc/logrotate.d/evernodewatcher"
+cat << EOF | sudo tee "$LOGROTATE_CONFIG" > /dev/null
 $LOG_FILE {
     size 5k
     rotate 1
-    delaycompress
-    missingok
     notifempty
-    create 644 root root
+    compress
 }
 EOF
-    fi
-}
 
-# Function to read notification URL from file
-read_notification_url() {
-    if [ -f "$NOTIFICATION_FILE" ]; then
-        NOTIFICATION_URL=$(<"$NOTIFICATION_FILE")
-    else
-        NOTIFICATION_URL=""
-    fi
-}
+# Notification URL file
+NOTIFICATION_URL_FILE="/opt/ripplered/notification_url.txt"
 
-# Function to save notification URL to file
-save_notification_url() {
-    echo "$1" > "$NOTIFICATION_FILE"
-}
-
-# Prompt the user for the notification URL if not provided as an argument
-if [ "$#" -lt 1 ]; then
-    read -p "Enter the notification URL (current URL: $(<"$NOTIFICATION_FILE")): " NEW_NOTIFICATION_URL
-    if [ -z "$NEW_NOTIFICATION_URL" ]; then
-        echo "Error: You must provide a notification URL."
-        exit 1
-    fi
+# Check if URL file exists
+if [ -f "$NOTIFICATION_URL_FILE" ]; then
+    # Read the notification URL from the file
+    NOTIFICATION_URL=$(cat "$NOTIFICATION_URL_FILE")
 else
-    NEW_NOTIFICATION_URL="$1"
+    # Prompt the user for a new URL
+    read -p "Enter the notification URL: " NOTIFICATION_URL
+
+    # Save the URL to the file
+    echo "$NOTIFICATION_URL" > "$NOTIFICATION_URL_FILE"
 fi
 
-# Save the new notification URL
-save_notification_url "$NEW_NOTIFICATION_URL"
-
-# Check the service status and notify.
-if systemctl is-active --quiet "$SERVICE_NAME"; then
-    # If service is running, call the notification URL
-    curl -s "$NEW_NOTIFICATION_URL" >/dev/null
+# Check if URL is empty
+if [ -z "$NOTIFICATION_URL" ]; then
+    echo "Error: Notification URL is not provided." >&2
+    exit 1
 fi
 
-# Create logrotate configuration
-create_logrotate_config
+# Push URL
+if ! curl -s "$NOTIFICATION_URL" >/dev/null; then
+    echo "Failed to push URL: $NOTIFICATION_URL" >&2
+    exit 1
+fi
 
-# Make the script executable
-chmod +x "$0"
-
-# Add cron job to call the script every minute
-{ crontab -l 2>/dev/null; echo "* * * * * /bin/bash $(realpath "$0")"; } | crontab -
+# Set up cron job
+CRON_JOB="* * * * * /opt/ripplered/push_url.sh >> $LOG_FILE 2>&1"
+(crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
