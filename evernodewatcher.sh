@@ -1,7 +1,13 @@
 #!/bin/bash
 
+# Create directory if it doesn't exist
+INSTALL_DIR="/opt/ripplered"
+if [ ! -d "$INSTALL_DIR" ]; then
+    sudo mkdir -p "$INSTALL_DIR"
+fi
+
 # Set up log file
-LOG_FILE="/opt/ripplered/evernodewatcher.log"
+LOG_FILE="$INSTALL_DIR/evernodewatcher.log"
 touch "$LOG_FILE"
 chmod 644 "$LOG_FILE"
 
@@ -17,7 +23,7 @@ $LOG_FILE {
 EOF
 
 # Notification URL file
-NOTIFICATION_URL_FILE="/opt/ripplered/notification_url.txt"
+NOTIFICATION_URL_FILE="$INSTALL_DIR/notification_url.txt"
 
 # Check if URL file exists
 if [ -f "$NOTIFICATION_URL_FILE" ]; then
@@ -44,5 +50,5 @@ if ! curl -s "$NOTIFICATION_URL" >/dev/null; then
 fi
 
 # Set up cron job
-CRON_JOB="* * * * * /opt/ripplered/push_url.sh >> $LOG_FILE 2>&1"
+CRON_JOB="* * * * * $INSTALL_DIR/push_url.sh >> $LOG_FILE 2>&1"
 (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
