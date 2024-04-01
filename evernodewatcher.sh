@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Directory to store files
-INSTALL_DIR="/opt/ripplered"
+INSTALL_DIR="/opt/ripplered/"
 
 # Set up log file
 LOG_FILE="$INSTALL_DIR/evernodewatcher.log"
