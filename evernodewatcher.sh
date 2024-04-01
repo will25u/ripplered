@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Create directory if it doesn't exist
-INSTALL_DIR="/opt/ripplered"
-if [ ! -d "$INSTALL_DIR" ]; then
-    sudo mkdir -p "$INSTALL_DIR"
-fi
-
 # Set up log file
 LOG_FILE="$INSTALL_DIR/evernodewatcher.log"
 touch "$LOG_FILE"
